@@ -1,0 +1,7 @@
+tests/
+simulate_event.py
+requirements.lock
+.github/
+.gitignore
+README.md
+specs/
