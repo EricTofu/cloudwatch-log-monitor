@@ -4,7 +4,7 @@ A serverless AWS Lambda function that monitors CloudWatch Logs for specific erro
 
 ## Credits
 
-This project is written by Google Antigravity(Using Gemini 3 Pro).
+This project is written by Google Antigravity(Using Gemini 3 Pro and Claude Sonnet 4.5).
 
 ## Features
 
