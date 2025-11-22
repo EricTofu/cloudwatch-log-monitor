@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional, Pattern
 logger = logging.getLogger()
 
 class LogProcessor:
-    def __init__(self):
+    def __init__(self) -> None:
         self._pattern_cache: Dict[str, Pattern] = {}
 
     def process_log_batch(self, log_group: str, log_stream: str, log_events: List[Dict[str, Any]], config: Dict[str, Any]) -> List[Dict[str, Any]]:

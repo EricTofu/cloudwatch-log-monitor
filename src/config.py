@@ -22,6 +22,7 @@ class ConfigLoader:
         config_data: Optional[Dict[str, Any]] = None
 
         logger.info(f"Loading configuration from {config_source}")
+        config_content: Optional[str] = None
 
         if config_source == 'SSM':
             param_name = os.environ.get('SSM_PARAMETER_NAME')
