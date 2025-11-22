@@ -6,9 +6,6 @@ import base64
 import logging
 from unittest.mock import MagicMock, patch
 
-# Add root to path if needed (usually current dir is implicitly in path)
-# sys.path.append(os.path.dirname(__file__))
-
 # Mock environment variables
 os.environ['CONFIG_SOURCE'] = 'ENV'
 os.environ['STREAM_CONFIG'] = json.dumps({
@@ -23,11 +20,24 @@ os.environ['STREAM_CONFIG'] = json.dumps({
     ]
 })
 
+# Mock missing dependencies
+sys.modules['boto3'] = MagicMock()
+sys.modules['botocore'] = MagicMock()
+sys.modules['botocore.exceptions'] = MagicMock()
+sys.modules['yaml'] = MagicMock()
+
+# Setup mock for ClientError
+class MockClientError(Exception):
+    pass
+sys.modules['botocore.exceptions'].ClientError = MockClientError
+
 # Import modules to ensure they are loaded before patching
+# Now that we mocked boto3 and yaml, these imports should succeed
 import src.aws_client
 import src.notifications.slack_webhook_provider
+from src.lambda_function import lambda_handler
 
-# Mock AWS Client
+# Mock AWS Client behavior
 with patch('src.aws_client.boto3') as mock_boto3:
     # Mock Logs client
     mock_logs = MagicMock()
@@ -47,9 +57,6 @@ with patch('src.aws_client.boto3') as mock_boto3:
             {'timestamp': 1600000001000, 'message': '[INFO] Previous log 2'}
         ]
     }
-
-    # Import handler after mocks are set up
-    from src.lambda_function import lambda_handler
 
     # Create a sample event
     log_data = {
@@ -90,6 +97,21 @@ with patch('src.aws_client.boto3') as mock_boto3:
     print("\nSimulation Complete.")
     
     # Verify SNS call
+    # Since we mocked boto3 globally, we need to check the mock we set up
+    # But AWSClient creates its own clients.
+    # Our global mock 'boto3' is what AWSClient sees.
+    # We need to ensure AWSClient uses our mock_client factory.
+    # The 'patch' context manager above patches 'src.aws_client.boto3'.
+    # Since we imported src.aws_client AFTER mocking sys.modules['boto3'], 
+    # src.aws_client.boto3 is the MagicMock from sys.modules.
+    # The patch then replaces THAT mock with a new one? 
+    # Actually, if we mock sys.modules['boto3'], import boto3 returns that mock.
+    # src.aws_client does 'import boto3'.
+    # So src.aws_client.boto3 IS the mock from sys.modules.
+    # The patch('src.aws_client.boto3') will replace it.
+    
+    # Let's verify if SNS was called.
+    # We need to access the mock_sns object we created.
     if mock_sns.publish.called:
         print("\nSNS Notification Sent!")
         args, kwargs = mock_sns.publish.call_args

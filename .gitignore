@@ -40,3 +40,7 @@ Thumbs.db
 # Project specific
 package/
 log_monitor.zip
+
+# AWS SAM
+.aws-sam/
+

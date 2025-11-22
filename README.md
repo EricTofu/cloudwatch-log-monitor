@@ -4,7 +4,7 @@ A serverless AWS Lambda function that monitors CloudWatch Logs for specific erro
 
 ## Credits
 
-This project is written by Google Antigravity.
+This project is written by Google Antigravity(Using Gemini 3 Pro).
 
 ## Features
 
@@ -13,6 +13,8 @@ This project is written by Google Antigravity.
 - **Flexible Filtering**: Supports regex patterns and whitelists to reduce noise.
 - **Multi-Channel Routing**: Route alerts to different Slack channels or SNS topics based on log stream type (e.g., API vs. Worker).
 - **External Configuration**: Load rules from Environment Variables, SSM Parameter Store, or S3.
+- **Infrastructure as Code**: Deployed using AWS SAM.
+- **Type Safe**: Fully typed Python codebase.
 
 ## Project Structure
 
@@ -24,51 +26,57 @@ This project is written by Google Antigravity.
 │   ├── aws_client.py           # AWS SDK wrappers
 │   ├── config.py               # Configuration loader (Env/SSM/S3)
 │   └── notifications/          # Slack/SNS providers
+├── tests/                      # Unit tests
+├── .github/workflows/          # CI/CD pipelines
+├── template.yaml               # AWS SAM Infrastructure definition
 ├── simulate_event.py           # Local testing script
 ├── requirements.txt            # Python dependencies
-└── specs/                      # Project requirements
+└── requirements.lock           # Pinned dependencies
 ```
 
 ## Usage
 
-### Local Testing
+### Prerequisites
 
-You can simulate a CloudWatch Logs event locally using the provided script:
+- Python 3.12+
+- AWS CLI installed and configured
+- AWS SAM CLI installed
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+### Local Development
 
-# Run simulation
-python simulate_event.py
-```
+1.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-This script mocks the AWS environment and processes a sample log event, printing the output to the console.
+2.  **Run Tests**:
+    ```bash
+    pytest tests/
+    ```
+
+3.  **Simulate Event**:
+    You can simulate a CloudWatch Logs event locally using the provided script:
+    ```bash
+    python simulate_event.py
+    ```
 
 ### Deployment
 
-This project is designed to be deployed as an AWS Lambda function.
+This project is deployed using the AWS Serverless Application Model (SAM).
 
-1.  **Package the function**:
-    Create a ZIP file containing the `src` directory and installed dependencies.
+1.  **Build the application**:
     ```bash
-    pip install -r requirements.txt -t .
-    zip -r lambda_package.zip src/ boto3/ requests/ pyyaml/ ...
+    sam build
     ```
-    *(Note: `boto3` is usually available in the Lambda runtime, so you might not need to include it if using the standard Python runtime).*
 
-2.  **Create Lambda Function**:
-    Upload `lambda_package.zip` to AWS Lambda. Set the handler to `src.lambda_function.lambda_handler`.
+2.  **Deploy**:
+    ```bash
+    sam deploy --guided
+    ```
+    Follow the prompts to configure your stack name, AWS region, and parameter overrides.
 
-3.  **Set Permissions**:
-    Ensure the Lambda execution role has permissions to:
-    - `logs:GetLogEvents` (to fetch context)
-    - `ssm:GetParameter` (if using SSM config)
-    - `s3:GetObject` (if using S3 config)
-    - `sns:Publish` (if using SNS notifications)
-
-4.  **Configure Triggers**:
-    Add a CloudWatch Logs Subscription Filter to the Log Groups you want to monitor, pointing to this Lambda function.
+3.  **Configure Triggers**:
+    The `template.yaml` includes an example Log Group and Subscription Filter. In a real scenario, you would attach the `LogMonitorFunction` to your existing Log Groups using CloudWatch Subscription Filters.
 
 ## Configuration
 
@@ -100,7 +108,6 @@ Split configuration across multiple parameters under a common path. Useful for l
 - **Parameter 2**: `/my-app/config/worker` -> `{ "stream_types": [...] }`
 - **Lambda Env**: `SSM_PARAMETER_NAME=/my-app/config/` (Must end with `/`)
 
-
 ### Stream Configuration Format
 
 The configuration defines how to identify log streams and where to send alerts.
@@ -129,10 +136,7 @@ The configuration defines how to identify log streams and where to send alerts.
 
 - **type**: Friendly name for the log source.
 - **pattern**: Regex to match the Log Stream name (e.g., `api-.*` matches `api-server-123`).
-- **filters**: List of keywords/regex to trigger an alert.
-- **whitelist**: List of keywords/regex to ignore.
+- **filters**: List of keywords to trigger an alert.
+- **whitelist**: List of regex patterns to ignore.
 - **slack_webhook_url**: Destination for Slack notifications.
 - **sns_topic_arn**: Destination for SNS notifications.
-
-
-

@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  CloudWatch Log Monitor
+  
+  Serverless function to monitor CloudWatch Logs for error patterns and send notifications.
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 128
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+
+Resources:
+  LogMonitorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src.lambda_function.lambda_handler
+      Description: Monitors CloudWatch Logs for errors
+      Environment:
+        Variables:
+          CONFIG_SOURCE: ENV
+          # STREAM_CONFIG: ... (Set via parameter or console)
+          # SSM_PARAMETER_NAME: ...
+          # S3_BUCKET: ...
+          # S3_KEY: ...
+      Policies:
+        - Statement:
+          - Sid: CloudWatchLogsAccess
+            Effect: Allow
+            Action:
+              - logs:GetLogEvents
+            Resource: arn:aws:logs:*:*:log-group:*:log-stream:*
+          - Sid: SSMAccess
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParametersByPath
+            Resource: arn:aws:ssm:*:*:parameter/*
+          - Sid: S3Access
+            Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource: arn:aws:s3:::*
+          - Sid: SNSAccess
+            Effect: Allow
+            Action:
+              - sns:Publish
+            Resource: arn:aws:sns:*:*:*
+
+  # Example Log Group to monitor (Optional, for demo purposes)
+  # In production, you would attach the subscription filter to existing log groups.
+  DemoLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/demo-app
+      RetentionInDays: 7
+
+  # Subscription Filter
+  LogSubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      LogGroupName: !Ref DemoLogGroup
+      FilterPattern: "" # Empty pattern to send all logs to Lambda for processing
+      DestinationArn: !GetAtt LogMonitorFunction.Arn
+      RoleArn: !GetAtt SubscriptionFilterRole.Arn
+
+  # Role for CloudWatch Logs to invoke Lambda
+  SubscriptionFilterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: logs.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt LogMonitorFunction.Arn
+
+  # Permission for CloudWatch Logs to invoke Lambda (Resource-based policy)
+  # This is often needed instead of or in addition to the Role depending on setup
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LogMonitorFunction
+      Principal: logs.amazonaws.com
+      SourceArn: !GetAtt DemoLogGroup.Arn
+
+Outputs:
+  LogMonitorFunctionArn:
+    Description: "Log Monitor Lambda Function ARN"
+    Value: !GetAtt LogMonitorFunction.Arn
+  LogMonitorFunctionIamRole:
+    Description: "Implicit IAM Role created for Log Monitor function"
+    Value: !GetAtt LogMonitorFunctionRole.Arn
