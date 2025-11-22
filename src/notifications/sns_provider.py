@@ -1,14 +1,14 @@
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from src.notifications import NotificationProvider
 from src.aws_client import AWSClient
 
 logger = logging.getLogger()
 
 class SNSProvider(NotificationProvider):
-    def __init__(self, aws_client: AWSClient = None) -> None:
+    def __init__(self, aws_client: Optional[AWSClient] = None) -> None:
         self.aws_client = aws_client or AWSClient()
 
     def send_notification(self, target_arn: str, data: Dict[str, Any]) -> None:
