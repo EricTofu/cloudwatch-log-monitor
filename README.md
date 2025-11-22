@@ -140,3 +140,22 @@ The configuration defines how to identify log streams and where to send alerts.
 - **whitelist**: List of regex patterns to ignore.
 - **slack_webhook_url**: Destination for Slack notifications.
 - **sns_topic_arn**: Destination for SNS notifications.
+
+### Configuration Tuning
+
+To reduce noise (`whitelist`) or catch more errors (`filters`):
+
+**1. Whitelist (Silence Noise)**
+Use Regex patterns to ignore specific messages.
+```json
+"whitelist": [
+  "Connection reset by peer",
+  "User \\d+ failed auth"  // Escape backslashes!
+]
+```
+
+**2. Filters (Catch Errors)**
+Use keywords (case-insensitive) to trigger alerts.
+```json
+"filters": ["ERROR", "Exception", "PaymentFailed"]
+```
