@@ -1,20 +1,16 @@
 import json
 import logging
+import requests
 from datetime import datetime
+from typing import Dict, Any, List
 
 logger = logging.getLogger()
 
 from src.notifications import NotificationProvider
 
 class SlackWebhookProvider(NotificationProvider):
-    def send_notification(self, webhook_url, notification_data):
+    def send_notification(self, webhook_url: str, notification_data: Dict[str, Any]) -> bool:
         """Sends a formatted notification to Slack."""
-        try:
-            import requests
-        except ImportError:
-            logger.error("The 'requests' library is required for Slack notifications but is not installed.")
-            return False
-
         if not webhook_url:
             logger.error("No Slack webhook URL provided")
             return False
@@ -36,7 +32,7 @@ class SlackWebhookProvider(NotificationProvider):
             logger.error(f"Error sending Slack notification: {e}")
             return False
 
-    def _build_payload(self, data):
+    def _build_payload(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Builds the Slack Block Kit payload."""
         log_group = data.get('log_group')
         log_stream = data.get('log_stream')

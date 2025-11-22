@@ -13,6 +13,26 @@ Globals:
     Architectures:
       - x86_64
 
+Parameters:
+  MonitoredLogGroupPattern:
+    Type: String
+    Default: "*"
+    Description: "Pattern for log groups to monitor (e.g., '/aws/lambda/*')"
+  
+  AllowedS3Buckets:
+    Type: CommaDelimitedList
+    Default: "*"
+    Description: "Comma-separated list of S3 bucket names for config (use '*' for all)"
+  
+  AllowedSNSTopics:
+    Type: CommaDelimitedList
+    Default: "*"
+    Description: "Comma-separated list of SNS topic ARNs for notifications (use '*' for all)"
+
+Conditions:
+  UseAllS3Buckets: !Equals [!Join ["", !Ref AllowedS3Buckets], "*"]
+  UseAllSNSTopics: !Equals [!Join ["", !Ref AllowedSNSTopics], "*"]
+
 Resources:
   LogMonitorFunction:
     Type: AWS::Serverless::Function
@@ -29,27 +49,35 @@ Resources:
           # S3_KEY: ...
       Policies:
         - Statement:
-          - Sid: CloudWatchLogsAccess
+           - Sid: CloudWatchLogsAccess
             Effect: Allow
             Action:
               - logs:GetLogEvents
-            Resource: arn:aws:logs:*:*:log-group:*:log-stream:*
+            Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${MonitoredLogGroupPattern}:log-stream:*"
           - Sid: SSMAccess
             Effect: Allow
             Action:
               - ssm:GetParameter
               - ssm:GetParametersByPath
-            Resource: arn:aws:ssm:*:*:parameter/*
+            Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*"
           - Sid: S3Access
             Effect: Allow
             Action:
               - s3:GetObject
-            Resource: arn:aws:s3:::*
+            Resource: !If
+              - UseAllS3Buckets
+              - "arn:aws:s3:::*/*"
+              - !Sub
+                - "arn:aws:s3:::${BucketList}/*"
+                - BucketList: !Join [",arn:aws:s3:::", !Ref AllowedS3Buckets]
           - Sid: SNSAccess
             Effect: Allow
             Action:
               - sns:Publish
-            Resource: arn:aws:sns:*:*:*
+            Resource: !If
+              - UseAllSNSTopics
+              - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:*"
+              - !Ref AllowedSNSTopics
 
   # Example Log Group to monitor (Optional, for demo purposes)
   # In production, you would attach the subscription filter to existing log groups.

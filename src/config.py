@@ -2,6 +2,7 @@ import os
 import json
 import yaml
 import logging
+import time
 from typing import List, Dict, Any, Optional, Union
 from src.aws_client import AWSClient
 
@@ -9,13 +10,18 @@ logger = logging.getLogger()
 
 class ConfigLoader:
     _config_cache: Optional[Dict[str, Any]] = None
+    _cache_timestamp: float = 0
+    _cache_ttl: int = 300  # 5 minutes in seconds
 
     def __init__(self, aws_client: Optional[AWSClient] = None):
         self.aws_client = aws_client or AWSClient()
 
     def load_config(self) -> Dict[str, Any]:
         """Loads configuration from the configured source (Env, SSM, or S3)."""
-        if ConfigLoader._config_cache:
+        # Check if cache is valid
+        current_time = time.time()
+        if ConfigLoader._config_cache and (current_time - ConfigLoader._cache_timestamp) < ConfigLoader._cache_ttl:
+            logger.debug("Returning cached configuration")
             return ConfigLoader._config_cache
 
         config_source = os.environ.get('CONFIG_SOURCE', 'ENV').upper()
@@ -67,6 +73,7 @@ class ConfigLoader:
              return {}
 
         ConfigLoader._config_cache = config_data
+        ConfigLoader._cache_timestamp = time.time()
         return config_data
 
     def _parse_content(self, content: str) -> Optional[Dict[str, Any]]:

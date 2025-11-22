@@ -8,7 +8,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 class AWSClient:
-    def __init__(self):
+    def __init__(self) -> None:
         self.ssm = boto3.client('ssm')
         self.s3 = boto3.client('s3')
         self.logs = boto3.client('logs')
@@ -67,26 +67,11 @@ class AWSClient:
         """
         Retrieves preceding logs for context.
         end_time: The timestamp of the matched event (in milliseconds).
+        
+        Strategy: Fetch the last 'limit' events before 'end_time' by querying backwards
+        from the event timestamp. startFromHead=False ensures we get the most recent events.
         """
         try:
-            # We want logs BEFORE the event.
-            # get_log_events 'endTime' is exclusive, so we use the event timestamp.
-            # We need to fetch enough events to get the last 'limit' ones.
-            # Since we don't know the start time, we can just ask for the events ending at end_time
-            # and take the last 'limit' ones.
-            # However, get_log_events works forward or backward.
-            # To get the *preceding* logs, we want to read *backwards* from the event time?
-            # Actually, get_log_events with startFromHead=False returns the most recent logs.
-            # But we want a specific window.
-            
-            # Strategy: Query a range ending at the event time.
-            # Since we don't know how far back 10 logs are, we might need a heuristic or just fetch a reasonable time window.
-            # Alternatively, we can use 'endTime' = event_timestamp and 'limit' = 10?
-            # get_log_events doesn't support 'limit' in reverse directly in a simple way without startFromHead logic.
-            # Actually, if we specify endTime, it returns events up to that time.
-            # If we don't specify startTime, it defaults to 24 hours ago or beginning of stream.
-            # If we set limit=10 and startFromHead=False (default), it should give us the *last* 10 events in that range.
-            
             response = self.logs.get_log_events(
                 logGroupName=log_group,
                 logStreamName=log_stream,
