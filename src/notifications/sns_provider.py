@@ -50,10 +50,10 @@ class SNSProvider(NotificationProvider):
             f"log-events/{encoded_log_stream}"
         )
 
-        # Markdown content for Chatbot
-        description = f"**Log Group:** {log_group}\n**Log Stream:** {log_stream}\n**Time:** {time_str} (JST)\n\n"
+        # Markdown content for Chatbot (use single * for bold in client-markdown)
+        description = f"*Log Group:* {log_group}\n*Log Stream:* {log_stream}\n*Time:* {time_str} (JST)\n\n"
         description += f"[🔍 View in CloudWatch Logs]({cloudwatch_url})\n\n"
-        description += f"**Matched Event:**\n```\n{matched_event.get('message', '')}\n```\n\n"
+        description += f"*Matched Event:*\n```\n{matched_event.get('message', '')}\n```\n\n"
 
         if context_events:
             context_text = ""
@@ -71,7 +71,7 @@ class SNSProvider(NotificationProvider):
             if len(context_text) > 2000:
                 context_text = context_text[:2000] + "\n... (truncated)"
             
-            description += f"**Context:**\n```\n{context_text}\n```"
+            description += f"*Context:*\n```\n{context_text}\n```"
 
         return {
             "version": "1.0",
