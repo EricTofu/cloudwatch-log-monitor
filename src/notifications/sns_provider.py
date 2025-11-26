@@ -30,6 +30,7 @@ class SNSProvider(NotificationProvider):
         stream_type = data.get('log_stream_type')
         matched_event = data.get('matched_event', {})
         context_events = data.get('context_events', [])
+        aws_region = data.get('aws_region', 'us-east-1')
 
         # Use JST timestamp if available, otherwise fallback (though JST should be there)
         time_str = matched_event.get('timestamp_jst')
@@ -37,8 +38,21 @@ class SNSProvider(NotificationProvider):
             ts = matched_event.get('timestamp', 0) / 1000
             time_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S UTC')
 
+        # Generate CloudWatch Logs URL (compact format)
+        import urllib.parse
+        encoded_log_group = urllib.parse.quote(log_group, safe='')
+        encoded_log_stream = urllib.parse.quote(log_stream, safe='')
+        
+        # Use compact URL format
+        cloudwatch_url = (
+            f"https://console.aws.amazon.com/cloudwatch/home?"
+            f"region={aws_region}#logsV2:log-groups/log-group/{encoded_log_group}/"
+            f"log-events/{encoded_log_stream}"
+        )
+
         # Markdown content for Chatbot
         description = f"**Log Group:** {log_group}\n**Log Stream:** {log_stream}\n**Time:** {time_str} (JST)\n\n"
+        description += f"[🔍 View in CloudWatch Logs]({cloudwatch_url})\n\n"
         description += f"**Matched Event:**\n```\n{matched_event.get('message', '')}\n```\n\n"
 
         if context_events:
@@ -68,3 +82,4 @@ class SNSProvider(NotificationProvider):
                 "description": description
             }
         }
+

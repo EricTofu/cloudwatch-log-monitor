@@ -49,7 +49,7 @@ Resources:
           # S3_KEY: ...
       Policies:
         - Statement:
-           - Sid: CloudWatchLogsAccess
+          - Sid: CloudWatchLogsAccess
             Effect: Allow
             Action:
               - logs:GetLogEvents

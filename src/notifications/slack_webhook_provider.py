@@ -39,6 +39,7 @@ class SlackWebhookProvider(NotificationProvider):
         stream_type = data.get('log_stream_type')
         matched_event = data.get('matched_event', {})
         context_events = data.get('context_events', [])
+        aws_region = data.get('aws_region', 'us-east-1')
 
         # Format timestamp
         ts = matched_event.get('timestamp', 0) / 1000
@@ -47,6 +48,19 @@ class SlackWebhookProvider(NotificationProvider):
             time_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S UTC')
         else:
             time_str += " (JST)"
+
+        # Generate CloudWatch Logs URL (compact format)
+        # URL encode the log group and stream names
+        import urllib.parse
+        encoded_log_group = urllib.parse.quote(log_group, safe='')
+        encoded_log_stream = urllib.parse.quote(log_stream, safe='')
+        
+        # Use compact URL format
+        cloudwatch_url = (
+            f"https://console.aws.amazon.com/cloudwatch/home?"
+            f"region={aws_region}#logsV2:log-groups/log-group/{encoded_log_group}/"
+            f"log-events/{encoded_log_stream}"
+        )
 
         blocks = [
             {
@@ -80,13 +94,27 @@ class SlackWebhookProvider(NotificationProvider):
                 ]
             },
             {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"<{cloudwatch_url}|:mag: View in CloudWatch Logs>"
+                }
+            },
+            {
                 "type": "divider"
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Matched Log Event:*\n```{matched_event.get('message', '')}```"
+                    "text": "*Matched Log Event:*"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"```{matched_event.get('message', '')}```"
                 }
             }
         ]
@@ -109,8 +137,16 @@ class SlackWebhookProvider(NotificationProvider):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Context (Preceding Logs):*\n```{context_text}```"
+                    "text": "*Context (Preceding Logs):*"
+                }
+            })
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"```{context_text}```"
                 }
             })
 
         return {"blocks": blocks}
+

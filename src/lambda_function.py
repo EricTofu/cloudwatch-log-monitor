@@ -2,6 +2,7 @@ import json
 import gzip
 import base64
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -104,12 +105,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> None:
                 context_logs_jst.append(log_copy)
 
             # Prepare notification data
+            aws_region = os.environ.get('AWS_REGION', 'us-east-1')
             notification_data = {
                 'log_group': log_group,
                 'log_stream': log_stream,
                 'log_stream_type': stream_config.get('type', 'Unknown'),
                 'matched_event': matched_event_jst,
-                'context_events': context_logs_jst
+                'context_events': context_logs_jst,
+                'aws_region': aws_region
             }
 
             # Send notification
