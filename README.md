@@ -78,6 +78,21 @@ This project is deployed using the AWS Serverless Application Model (SAM).
 3.  **Configure Triggers**:
     The `template.yaml` includes an example Log Group and Subscription Filter. In a real scenario, you would attach the `LogMonitorFunction` to your existing Log Groups using CloudWatch Subscription Filters.
 
+### Updating Source Code
+
+If you only need to update the Lambda function code (e.g., `src/`), you can use `sam sync` for faster updates during development:
+
+```bash
+sam sync --stack-name <your-stack-name> --code
+```
+
+Or, if you prefer the standard deployment but want to skip the guided prompts:
+
+```bash
+sam build
+sam deploy
+```
+
 ## Configuration
 
 The function can be configured via Environment Variables.
@@ -119,23 +134,33 @@ The configuration defines how to identify log streams and where to send alerts.
   "stream_types": [
     {
       "type": "api-server",
+      "log_group_pattern": "/aws/lambda/main-app",
       "pattern": "api-.*",
-      "filters": ["ERROR", "Exception"],
+      "filters": ["ERROR"],
       "whitelist": ["HealthCheck", "ThrottlingException"],
-      "slack_webhook_url": "https://hooks.slack.com/services/..."
+      "slack_webhook_url": "..."
     },
     {
       "type": "worker",
+      "log_group_pattern": "/aws/lambda/main-app", 
       "pattern": "worker-.*",
       "filters": ["CRITICAL"],
-      "sns_topic_arn": "arn:aws:sns:us-east-1:123456789012:alerts-topic"
+      "sns_topic_arn": "..."
+    },
+    {
+      "type": "legacy-app",
+      "log_group_pattern": "/aws/lambda/legacy-.*",
+      # No stream pattern needed if we want all logs from this group
+      "filters": ["Exception"],
+      "sns_topic_arn": "..."
     }
   ]
 }
 ```
 
 - **type**: Friendly name for the log source.
-- **pattern**: Regex to match the Log Stream name (e.g., `api-.*` matches `api-server-123`).
+- **pattern**: (Optional) Regex to match the Log Stream name. Required if `log_group_pattern` is not set.
+- **log_group_pattern**: (Optional) Regex to match the Log Group name. Useful when multiple log groups share stream naming patterns.
 - **filters**: List of keywords to trigger an alert.
 - **whitelist**: List of regex patterns to ignore.
 - **slack_webhook_url**: Destination for Slack notifications.

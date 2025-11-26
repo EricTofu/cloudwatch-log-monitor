@@ -15,9 +15,9 @@ class LogProcessor:
         """
         matches: List[Dict[str, Any]] = []
         
-        stream_config = self._get_stream_config(log_stream, config)
+        stream_config = self._get_stream_config(log_group, log_stream, config)
         if not stream_config:
-            logger.info(f"No configuration found for log stream: {log_stream}")
+            logger.info(f"No configuration found for log stream: {log_stream} in group: {log_group}")
             return matches
 
         logger.info(f"Processing {len(log_events)} events for stream {log_stream} (Type: {stream_config.get('type')})")
@@ -36,25 +36,41 @@ class LogProcessor:
 
         return matches
 
-    def _get_stream_config(self, log_stream: str, config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_stream_config(self, log_group: str, log_stream: str, config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Finds the matching configuration for a log stream."""
         stream_types = config.get('stream_types', [])
         
         for st_config in stream_types:
-            pattern_str = st_config.get('pattern')
-            if not pattern_str:
-                continue
+            # Check log group pattern if present
+            log_group_pattern = st_config.get('log_group_pattern')
+            if log_group_pattern:
+                if log_group_pattern not in self._pattern_cache:
+                    try:
+                        self._pattern_cache[log_group_pattern] = re.compile(log_group_pattern)
+                    except re.error as e:
+                        logger.error(f"Invalid regex pattern '{log_group_pattern}': {e}")
+                        continue
                 
-            # Cache the compiled pattern for the stream type
-            if pattern_str not in self._pattern_cache:
-                try:
-                    self._pattern_cache[pattern_str] = re.compile(pattern_str)
-                except re.error as e:
-                    logger.error(f"Invalid regex pattern '{pattern_str}': {e}")
+                if not self._pattern_cache[log_group_pattern].search(log_group):
                     continue
+
+            pattern_str = st_config.get('pattern')
+            if pattern_str:
+                # Cache the compiled pattern for the stream type
+                if pattern_str not in self._pattern_cache:
+                    try:
+                        self._pattern_cache[pattern_str] = re.compile(pattern_str)
+                    except re.error as e:
+                        logger.error(f"Invalid regex pattern '{pattern_str}': {e}")
+                        continue
+                
+                if not self._pattern_cache[pattern_str].search(log_stream):
+                    continue
+            elif not log_group_pattern:
+                # If neither pattern nor log_group_pattern is specified, skip to avoid matching everything by accident
+                continue
             
-            if self._pattern_cache[pattern_str].search(log_stream):
-                return st_config
+            return st_config
         
         return None
 

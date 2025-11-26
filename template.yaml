@@ -79,52 +79,7 @@ Resources:
               - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:*"
               - !Ref AllowedSNSTopics
 
-  # Example Log Group to monitor (Optional, for demo purposes)
-  # In production, you would attach the subscription filter to existing log groups.
-  DemoLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/lambda/demo-app
-      RetentionInDays: 7
 
-  # Subscription Filter
-  LogSubscriptionFilter:
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      LogGroupName: !Ref DemoLogGroup
-      FilterPattern: "" # Empty pattern to send all logs to Lambda for processing
-      DestinationArn: !GetAtt LogMonitorFunction.Arn
-      RoleArn: !GetAtt SubscriptionFilterRole.Arn
-
-  # Role for CloudWatch Logs to invoke Lambda
-  SubscriptionFilterRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: logs.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: InvokeLambda
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: lambda:InvokeFunction
-                Resource: !GetAtt LogMonitorFunction.Arn
-
-  # Permission for CloudWatch Logs to invoke Lambda (Resource-based policy)
-  # This is often needed instead of or in addition to the Role depending on setup
-  LambdaInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref LogMonitorFunction
-      Principal: logs.amazonaws.com
-      SourceArn: !GetAtt DemoLogGroup.Arn
 
 Outputs:
   LogMonitorFunctionArn:

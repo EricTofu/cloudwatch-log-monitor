@@ -42,7 +42,11 @@ class SlackWebhookProvider(NotificationProvider):
 
         # Format timestamp
         ts = matched_event.get('timestamp', 0) / 1000
-        time_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S UTC')
+        time_str = matched_event.get('timestamp_jst')
+        if not time_str:
+            time_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S UTC')
+        else:
+            time_str += " (JST)"
 
         blocks = [
             {
@@ -91,7 +95,10 @@ class SlackWebhookProvider(NotificationProvider):
             context_text = ""
             for event in context_events:
                 # Format each context line
-                evt_ts = datetime.fromtimestamp(event.get('timestamp', 0) / 1000).strftime('%H:%M:%S')
+                evt_ts = event.get('timestamp_jst')
+                if not evt_ts:
+                    evt_ts = datetime.fromtimestamp(event.get('timestamp', 0) / 1000).strftime('%H:%M:%S')
+                
                 context_text += f"[{evt_ts}] {event.get('message', '')}\n"
             
             # Truncate if too long (Slack block limit is 3000 chars)

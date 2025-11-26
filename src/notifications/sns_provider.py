@@ -31,17 +31,27 @@ class SNSProvider(NotificationProvider):
         matched_event = data.get('matched_event', {})
         context_events = data.get('context_events', [])
 
-        ts = matched_event.get('timestamp', 0) / 1000
-        time_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S UTC')
+        # Use JST timestamp if available, otherwise fallback (though JST should be there)
+        time_str = matched_event.get('timestamp_jst')
+        if not time_str:
+            ts = matched_event.get('timestamp', 0) / 1000
+            time_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S UTC')
 
         # Markdown content for Chatbot
-        description = f"**Log Group:** {log_group}\n**Log Stream:** {log_stream}\n**Time:** {time_str}\n\n"
+        description = f"**Log Group:** {log_group}\n**Log Stream:** {log_stream}\n**Time:** {time_str} (JST)\n\n"
         description += f"**Matched Event:**\n```\n{matched_event.get('message', '')}\n```\n\n"
 
         if context_events:
             context_text = ""
             for event in context_events:
-                evt_ts = datetime.fromtimestamp(event.get('timestamp', 0) / 1000).strftime('%H:%M:%S')
+                evt_ts = event.get('timestamp_jst')
+                if not evt_ts:
+                     evt_ts = datetime.fromtimestamp(event.get('timestamp', 0) / 1000).strftime('%H:%M:%S')
+                else:
+                    # Extract time part only for context to keep it compact, or use full?
+                    # Let's use full to be safe and explicit about JST
+                    pass
+
                 context_text += f"[{evt_ts}] {event.get('message', '')}\n"
             
             if len(context_text) > 2000:

@@ -2,7 +2,10 @@ import json
 import gzip
 import base64
 import logging
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
+
+JST = timezone(timedelta(hours=9))
 from src.config import ConfigLoader
 from src.aws_client import AWSClient
 from src.notifications.slack_webhook_provider import SlackWebhookProvider
@@ -86,13 +89,27 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> None:
                 matched_event['timestamp']
             )
 
+            # Convert timestamps to JST
+            def to_jst_str(timestamp_ms):
+                dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+                return dt.astimezone(JST).strftime('%Y-%m-%d %H:%M:%S')
+
+            matched_event_jst = matched_event.copy()
+            matched_event_jst['timestamp_jst'] = to_jst_str(matched_event['timestamp'])
+            
+            context_logs_jst = []
+            for log in context_logs:
+                log_copy = log.copy()
+                log_copy['timestamp_jst'] = to_jst_str(log['timestamp'])
+                context_logs_jst.append(log_copy)
+
             # Prepare notification data
             notification_data = {
                 'log_group': log_group,
                 'log_stream': log_stream,
                 'log_stream_type': stream_config.get('type', 'Unknown'),
-                'matched_event': matched_event,
-                'context_events': context_logs
+                'matched_event': matched_event_jst,
+                'context_events': context_logs_jst
             }
 
             # Send notification
