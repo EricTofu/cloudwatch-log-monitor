@@ -28,7 +28,6 @@ class ConfigLoader:
         config_data: Optional[Dict[str, Any]] = None
 
         logger.info(f"Loading configuration from {config_source}")
-        config_content: Optional[str] = None
 
         if config_source == 'SSM':
             param_name = os.environ.get('SSM_PARAMETER_NAME')
@@ -75,6 +74,7 @@ class ConfigLoader:
         ConfigLoader._config_cache = config_data
         ConfigLoader._cache_timestamp = time.time()
         return config_data
+
 
     def _parse_content(self, content: str) -> Optional[Dict[str, Any]]:
         """Parses JSON or YAML content."""

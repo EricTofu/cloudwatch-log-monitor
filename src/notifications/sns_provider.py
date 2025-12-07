@@ -69,7 +69,7 @@ class SNSProvider(NotificationProvider):
                 context_text += f"[{evt_ts}] {event.get('message', '')}\n"
             
             if len(context_text) > 2000:
-                context_text = context_text[:2000] + "\n... (truncated)"
+                context_text = "... (truncated)\n" + context_text[-2000:]
             
             description += f"*Context:*\n```\n{context_text}\n```"
 

@@ -131,7 +131,7 @@ class SlackWebhookProvider(NotificationProvider):
             
             # Truncate if too long (Slack block limit is 3000 chars)
             if len(context_text) > 2900:
-                context_text = context_text[:2900] + "\n... (truncated)"
+                context_text = "... (truncated)\n" + context_text[-2900:]
 
             blocks.append({
                 "type": "section",
