@@ -51,7 +51,17 @@ class SNSProvider(NotificationProvider):
         )
 
         # Markdown content for Chatbot (use single * for bold in client-markdown)
-        description = f"*Log Group:* {log_group}\n*Log Stream:* {log_stream}\n*Time:* {time_str} (JST)\n\n"
+        
+        # Add severity emoji to title mapping (handled in _map_severity_emoji called later or here?)
+        # Let's use the severity for the title emoji
+        emoji = self._map_severity_emoji(data.get('severity'))
+        
+        mention = data.get('mention')
+        description = ""
+        if mention:
+             description += f"{mention}\n\n"
+
+        description += f"*Log Group:* {log_group}\n*Log Stream:* {log_stream}\n*Time:* {time_str} (JST)\n\n"
         description += f"[🔍 View in CloudWatch Logs]({cloudwatch_url})\n\n"
         description += f"*Matched Event:*\n```\n{matched_event.get('message', '')}\n```\n\n"
 
@@ -78,8 +88,22 @@ class SNSProvider(NotificationProvider):
             "source": "custom",
             "content": {
                 "textType": "client-markdown",
-                "title": f":rotating_light: Log Alert: {stream_type}",
+                "title": f"{emoji} Log Alert: {stream_type}",
                 "description": description
             }
         }
+    
+    def _map_severity_emoji(self, severity: Optional[str]) -> str:
+        """Maps severity levels to emojis."""
+        if not severity:
+            return ":rotating_light:"  # Default
+        
+        severity_map = {
+            "CRITICAL": ":rotating_light:",
+            "ERROR": ":red_circle:",
+            "WARNING": ":warning:",
+            "INFO": ":information_source:",
+            "DEBUG": ":mag:"
+        }
+        return severity_map.get(severity.upper(), ":rotating_light:")
 

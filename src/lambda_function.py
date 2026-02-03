@@ -112,7 +112,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> None:
                 'log_stream_type': stream_config.get('type', 'Unknown'),
                 'matched_event': matched_event_jst,
                 'context_events': context_logs_jst,
-                'aws_region': aws_region
+                'aws_region': aws_region,
+                'severity': stream_config.get('severity'),
+                'mention': stream_config.get('mention')
             }
 
             # Send notification

@@ -40,5 +40,26 @@ class TestSNSProvider(unittest.TestCase):
         self.assertIn('title', payload['content'])
         self.assertIn('description', payload['content'])
 
+    def test_build_chatbot_payload_with_severity_and_mention(self):
+        self.notification_data['severity'] = 'CRITICAL'
+        self.notification_data['mention'] = '@here'
+        
+        payload = self.provider._build_chatbot_payload(self.notification_data)
+        
+        # Check emoji in title
+        self.assertIn(':rotating_light:', payload['content']['title'])
+        
+        # Check mention in description
+        self.assertIn('@here', payload['content']['description'])
+
+    def test_map_severity_emoji(self):
+        self.assertEqual(self.provider._map_severity_emoji('CRITICAL'), ':rotating_light:')
+        self.assertEqual(self.provider._map_severity_emoji('ERROR'), ':red_circle:')
+        self.assertEqual(self.provider._map_severity_emoji('WARNING'), ':warning:')
+        self.assertEqual(self.provider._map_severity_emoji('INFO'), ':information_source:')
+        self.assertEqual(self.provider._map_severity_emoji('DEBUG'), ':mag:')
+        self.assertEqual(self.provider._map_severity_emoji('UNKNOWN'), ':rotating_light:')
+        self.assertEqual(self.provider._map_severity_emoji(None), ':rotating_light:')
+
 if __name__ == '__main__':
     unittest.main()

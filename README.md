@@ -137,6 +137,8 @@ The configuration defines how to identify log streams and where to send alerts.
       "log_group_pattern": "/aws/lambda/main-app",
       "pattern": "api-.*",
       "filters": ["ERROR"],
+      "severity": "ERROR",
+      "mention": "@channel",
       "whitelist": ["HealthCheck", "ThrottlingException"],
       "slack_webhook_url": "..."
     },
@@ -145,6 +147,8 @@ The configuration defines how to identify log streams and where to send alerts.
       "log_group_pattern": "/aws/lambda/main-app", 
       "pattern": "worker-.*",
       "filters": ["CRITICAL"],
+      "severity": "CRITICAL",
+      "mention": "@oncall-dev",
       "sns_topic_arn": "..."
     },
     {
@@ -163,6 +167,8 @@ The configuration defines how to identify log streams and where to send alerts.
 - **log_group_pattern**: (Optional) Regex to match the Log Group name. Useful when multiple log groups share stream naming patterns.
 - **filters**: List of keywords to trigger an alert.
 - **whitelist**: List of regex patterns to ignore.
+- **severity**: (Optional) Severity level (CRITICAL, ERROR, WARNING, INFO, DEBUG). Defaults to CRITICAL (🚨).
+- **mention**: (Optional) User or channel to mention (e.g., `@channel`, `@user`).
 - **slack_webhook_url**: Destination for Slack notifications.
 - **sns_topic_arn**: Destination for SNS notifications.
 

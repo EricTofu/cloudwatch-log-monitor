@@ -14,6 +14,8 @@ os.environ['STREAM_CONFIG'] = json.dumps({
             "type": "api-server",
             "pattern": "api-.*",
             "filters": ["ERROR", "Exception"],
+            "severity": "ERROR",
+            "mention": "@channel",
             "whitelist": ["HealthCheck"],
             "sns_topic_arn": "arn:aws:sns:us-east-1:123456789012:chatbot-topic"
         }
@@ -92,31 +94,18 @@ with patch('src.aws_client.boto3') as mock_boto3:
     event = {'awslogs': {'data': b64_data}}
 
     print("Running Lambda Handler Simulation...")
-    lambda_handler(event, None)
-    
-    print("\nSimulation Complete.")
-    
+    try:
+        lambda_handler(event, None)
+        print("\nSimulation Complete.")
+    except Exception as e:
+        print(f"\nSimulation Failed with error: {e}")
+
     # Verify SNS call
-    # Since we mocked boto3 globally, we need to check the mock we set up
-    # But AWSClient creates its own clients.
-    # Our global mock 'boto3' is what AWSClient sees.
-    # We need to ensure AWSClient uses our mock_client factory.
-    # The 'patch' context manager above patches 'src.aws_client.boto3'.
-    # Since we imported src.aws_client AFTER mocking sys.modules['boto3'], 
-    # src.aws_client.boto3 is the MagicMock from sys.modules.
-    # The patch then replaces THAT mock with a new one? 
-    # Actually, if we mock sys.modules['boto3'], import boto3 returns that mock.
-    # src.aws_client does 'import boto3'.
-    # So src.aws_client.boto3 IS the mock from sys.modules.
-    # The patch('src.aws_client.boto3') will replace it.
-    
-    # Let's verify if SNS was called.
-    # We need to access the mock_sns object we created.
     if mock_sns.publish.called:
         print("\nSNS Notification Sent!")
         args, kwargs = mock_sns.publish.call_args
-        print(f"Topic: {kwargs['TopicArn']}")
-        payload = json.loads(kwargs['Message'])
+        print(f"Topic: {kwargs.get('TopicArn')}")
+        payload = json.loads(kwargs.get('Message', '{}'))
         print(json.dumps(payload, indent=2))
     else:
         print("\nNo SNS Notification Sent.")

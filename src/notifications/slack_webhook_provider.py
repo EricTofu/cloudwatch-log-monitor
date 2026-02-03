@@ -62,62 +62,86 @@ class SlackWebhookProvider(NotificationProvider):
             f"log-events/{encoded_log_stream}"
         )
 
-        blocks = [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": f":rotating_light: Log Alert: {stream_type}",
-                    "emoji": True
-                }
-            },
-            {
-                "type": "section",
-                "fields": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*Log Group:*\n{log_group}"
-                    },
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*Log Stream:*\n{log_stream}"
-                    }
-                ]
-            },
-            {
-                "type": "section",
-                "fields": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*Time:*\n{time_str}"
-                    }
-                ]
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"<{cloudwatch_url}|:mag: View in CloudWatch Logs>"
-                }
-            },
-            {
-                "type": "divider"
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "*Matched Log Event:*"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"```{matched_event.get('message', '')}```"
-                }
+        severity = data.get('severity')
+        mention = data.get('mention')
+        
+        # Map severity to emoji
+        emoji = ":rotating_light:"
+        if severity:
+            severity_map = {
+                "CRITICAL": ":rotating_light:",
+                "ERROR": ":red_circle:",
+                "WARNING": ":warning:",
+                "INFO": ":information_source:",
+                "DEBUG": ":mag:"
             }
-        ]
+            emoji = severity_map.get(severity.upper(), ":rotating_light:")
+
+        blocks = []
+        
+        if mention:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": mention
+                }
+            })
+
+        blocks.append({
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"{emoji} Log Alert: {stream_type}",
+                "emoji": True
+            }
+        })
+        blocks.append({
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Log Group:*\n{log_group}"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Log Stream:*\n{log_stream}"
+                }
+            ]
+        })
+        blocks.append({
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Time:*\n{time_str}"
+                }
+            ]
+        })
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"<{cloudwatch_url}|:mag: View in CloudWatch Logs>"
+            }
+        })
+        blocks.append({
+            "type": "divider"
+        })
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Matched Log Event:*"
+            }
+        })
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"```{matched_event.get('message', '')}```"
+            }
+        })
 
         if context_events:
             context_text = ""

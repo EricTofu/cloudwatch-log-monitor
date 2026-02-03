@@ -47,5 +47,22 @@ class TestSlackWebhookProvider(unittest.TestCase):
         self.assertIsInstance(payload['blocks'], list)
         self.assertGreater(len(payload['blocks']), 0)
 
+    def test_build_payload_with_severity_and_mention(self):
+        self.notification_data['severity'] = 'ERROR'
+        self.notification_data['mention'] = '<@channel>'
+        
+        payload = self.provider._build_payload(self.notification_data)
+        
+        blocks = payload['blocks']
+        
+        # Check mention block
+        mention_block = next((b for b in blocks if b['type'] == 'section' and '<@channel>' in b['text']['text']), None)
+        self.assertIsNotNone(mention_block)
+        
+        # Check header emoji
+        header_block = next((b for b in blocks if b['type'] == 'header'), None)
+        self.assertIsNotNone(header_block)
+        self.assertIn(':red_circle:', header_block['text']['text'])
+
 if __name__ == '__main__':
     unittest.main()
