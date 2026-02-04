@@ -15,30 +15,40 @@ class LogProcessor:
         """
         matches: List[Dict[str, Any]] = []
         
-        stream_config = self._get_stream_config(log_group, log_stream, config)
-        if not stream_config:
+        matching_configs = self._get_matching_configs(log_group, log_stream, config)
+        if not matching_configs:
             logger.info(f"No configuration found for log stream: {log_stream} in group: {log_group}")
             return matches
 
-        logger.info(f"Processing {len(log_events)} events for stream {log_stream} (Type: {stream_config.get('type')})")
+        logger.info(f"Processing {len(log_events)} events for stream {log_stream} ({len(matching_configs)} matching configs)")
 
-        # Pre-compile whitelist patterns for this stream config
-        whitelist_patterns = self._compile_patterns(stream_config.get('whitelist', []))
+        # Pre-compile whitelist patterns and filters for each matching config
+        prepared_configs = []
+        for st_config in matching_configs:
+            prepared_configs.append({
+                'config': st_config,
+                'whitelist_patterns': self._compile_patterns(st_config.get('whitelist', [])),
+                'filters': st_config.get('filters', [])
+            })
 
         for event in log_events:
             message = event.get('message', '')
             
-            if self._is_match(message, stream_config, whitelist_patterns):
-                matches.append({
-                    'event': event,
-                    'config': stream_config
-                })
+            # Check against each matching configuration in order
+            for prepared in prepared_configs:
+                if self._is_match(message, prepared['filters'], prepared['whitelist_patterns']):
+                    matches.append({
+                        'event': event,
+                        'config': prepared['config']
+                    })
+                    break # Stop at first matching configuration for this event
 
         return matches
 
-    def _get_stream_config(self, log_group: str, log_stream: str, config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Finds the matching configuration for a log stream."""
+    def _get_matching_configs(self, log_group: str, log_stream: str, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Finds all matching configurations for a log stream."""
         stream_types = config.get('stream_types', [])
+        matches = []
         
         for st_config in stream_types:
             # Check log group pattern if present
@@ -70,9 +80,9 @@ class LogProcessor:
                 # If neither pattern nor log_group_pattern is specified, skip to avoid matching everything by accident
                 continue
             
-            return st_config
+            matches.append(st_config)
         
-        return None
+        return matches
 
     def _compile_patterns(self, patterns: List[str]) -> List[Pattern]:
         """Compiles a list of regex strings into pattern objects."""
@@ -87,14 +97,9 @@ class LogProcessor:
             compiled.append(self._pattern_cache[p])
         return compiled
 
-    def _is_match(self, message: str, stream_config: Dict[str, Any], whitelist_patterns: List[Pattern]) -> bool:
+    def _is_match(self, message: str, filters: List[str], whitelist_patterns: List[Pattern]) -> bool:
         """Checks if a message matches filters and does not match whitelist."""
-        filters = stream_config.get('filters', [])
-
         # Check if message matches any filter keyword (case-insensitive)
-        # Note: Filters are simple keywords, not regex, per original implementation.
-        # If they were regex, we should compile them too. 
-        # Requirement 4 says "filter keywords", implying substrings.
         is_filtered = False
         message_lower = message.lower()
         
